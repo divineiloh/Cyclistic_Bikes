@@ -1,0 +1,115 @@
+-- Confirm that the data type of each column are the same
+SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE COLUMN_NAME = 'end_station_id' AND DATA_TYPE = 'float'
+
+
+-- Change the datatype of the following columns from float to nvarchar
+ALTER TABLE dbo.september ALTER COLUMN end_station_id NVARCHAR(20)
+
+ALTER TABLE dbo.november ALTER COLUMN end_station_id NVARCHAR(20)
+
+ALTER TABLE dbo.december ALTER COLUMN end_station_id NVARCHAR(20)
+
+
+-- Confirm that the data type of each column are the same
+SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE COLUMN_NAME = 'start_station_id' AND DATA_TYPE = 'float'
+
+-- Change the datatype of the following columns from float to nvarchar
+ALTER TABLE dbo.april ALTER COLUMN start_station_id NVARCHAR(20)
+
+ALTER TABLE dbo.july ALTER COLUMN start_station_id NVARCHAR(20)
+
+ALTER TABLE dbo.october ALTER COLUMN start_station_id NVARCHAR(20)
+
+ALTER TABLE dbo.november ALTER COLUMN start_station_id NVARCHAR(20)
+
+
+-- Make use of the union function to combine data from all the months in 2022 and create a new table for the complete dataset.
+
+Select *
+	Into bikes_2022
+	From 
+	(Select * From dbo.january
+	UNION ALL
+	Select * From dbo.february
+	UNION ALL
+	Select * From dbo.march
+	UNION ALL
+	Select * From dbo.april
+	UNION ALL
+	Select * From dbo.may
+	UNION ALL
+	Select * From dbo.june
+	UNION ALL
+	Select * From dbo.july
+	UNION ALL
+	Select * From dbo.august
+	UNION ALL
+	Select * From dbo.september
+	UNION ALL
+	Select * From dbo.october
+	UNION ALL
+	Select * From dbo.november
+	UNION ALL
+	Select * From dbo.december
+	) b;
+
+
+-- Add column for ride_length
+ALTER TABLE dbo.bikes_2022
+ADD ride_length TIME;
+
+--Check to see the data type of each column
+SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE COLUMN_NAME = 'ride_length' OR COLUMN_NAME = 'started_at' OR COLUMN_NAME = 'ended_at'
+
+
+SELECT *
+FROM dbo.bikes_2022
+
+-- create a temp table and a new column called ride_length that tells the duration of each ride
+SELECT *, DATEDIFF(SECOND, started_at, ended_at) AS ride_length
+INTO temp_bikes
+FROM dbo.bikes_2022
+
+SELECT *
+FROM temp_bikes
+
+-- Create a new table that has all the columns and delete temp table 
+SELECT * 
+	INTO bikes_new
+FROM temp_bikes
+
+SELECT *
+FROM dbo.bikes_new
+
+DROP TABLE temp_bikes
+
+--get the day of the week, add it to a temp table and transfer to a new table
+SELECT *, DATENAME(WEEKDAY, started_at) AS day_of_week
+INTO bikes_2022
+FROM dbo.bikes_new
+
+
+--Performing descriptive statistics (Finding out if we have any row without a ride id or member_casual)
+SELECT *
+FROM dbo.bikes_2022
+WHERE ride_id IS NULL OR member_casual IS NULL
+
+SELECT day_of_week, COUNT(day_of_week) AS count
+FROM dbo.bikes_2022
+GROUP BY day_of_week
+
+SELECT member_casual, AVG(CAST(ride_length AS bigint)) AS ride_length_avg
+FROM dbo.bikes_2022
+GROUP BY member_casual
+
+SELECT *
+FROM dbo.bikes_2022
+ORDER BY ride_length desc
+OFFSET 0 rows
+FETCH NEXT 10 rows only;
